@@ -32,7 +32,12 @@ class CoMeeting
     Meeting.new(get("/meetings/show?meeting_id=#{meeting_id}"))
   end
 
-  private def mashize(response)
+  def attachment(attachment_id)
+    get("/attachments/show?attachment_id=#{attachment_id}")
+  end
+
+  private
+  def mashize(response)
     Mash.new(JSON.parse(response.body)['result'])
   end
 
