@@ -4,7 +4,7 @@ Bundler.require
 class CoMeeting
   include Hashie
 
-  ApiPrefix = '/api/v1'
+  PREFIX = '/api/v1'
 
   def initialize(conffile='secret.yml')
     @conf = Mash.load(conffile)
@@ -16,7 +16,7 @@ class CoMeeting
   end
 
   def get(path)
-    mashize(@access_token.get("#{ApiPrefix}#{path}"))
+    mashize(@access_token.get("#{PREFIX}#{path}"))
   end
 
   def bioit_group
