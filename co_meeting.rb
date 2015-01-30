@@ -29,11 +29,107 @@ class CoMeeting
   end
 
   def meeting(meeting_id)
-    get("/meetings/show?meeting_id=#{meeting_id}")
+    Meeting.new(get("/meetings/show?meeting_id=#{meeting_id}"))
   end
 
   private def mashize(response)
     Mash.new(JSON.parse(response.body)['result'])
+  end
+
+  class Meeting
+    attr_reader :mash # debug usage
+    attr_reader :title, :creator, :note, :discussion
+
+    def initialize(mash)
+      @mash = mash
+
+      @title = mash.title
+      @creator = mash.creator
+
+      @note = Note.new(mash.note)
+
+      # parse discussion blips into multi-rooted tree structure
+      @discussion = mash.discussion.rootThread.blipIds.map{|root_id|
+        Blip.expand(root_id, mash.discussion)
+      }
+    end
+
+    def all_attachments
+      @discussion.map{|b| b.all_attachments }.flatten
+    end
+
+    def dump
+      @discussion.map{|b| b.dump}
+    end
+
+    class Blip
+      attr_reader :creator, :updated, :content, :children
+      attr_accessor :attachments
+
+      def self.expand(blipid, discussion)
+        found = discussion.blips.find{|bid, data| bid == blipid }
+        return nil unless found
+        Blip.new(found.last, discussion)
+      end
+
+      def initialize(data, discussion)
+        @creator = data.creator
+        @updated = data.lastModifiedTime
+
+        @content = data.content
+
+        # TODO: APIでattachment取得
+        # http://co-meeting.github.io/api/attachments/show.html
+        @attachments = data.elements.select{|id, val|
+          val.type == 'ATTACHMENT'
+        }.map{|id, val|
+          val.properties # .attachmentId
+        }
+
+        @children = if data.childBlipIds.count.zero?
+                      []
+                    else
+                      data.childBlipIds.map{|child_id|
+                        Blip.expand(child_id, discussion)
+                      }
+                    end
+      end
+
+      def to_s(time: false)
+        suffix = time ? "\n(#{@updated})" : nil
+        "[#{@creator}]#{@content}#{suffix}"
+      end
+
+      def dump
+        if @children.count.zero?
+          to_s
+        else
+          [to_s, @children.map{|c| c.dump }]
+        end
+      end
+
+      def all_attachments
+        if @children.count.zero?
+          @attachments
+        else
+          @attachments + @children.map{|c| c.all_attachments }
+        end
+      end
+    end
+
+    class Note
+      attr_reader :attachments, :content
+
+      def initialize(mash)
+        @attachments = mash.elements.select{|id, val|
+          val.type == 'ATTACHMENT'
+        }.map{|id, val|
+          val.properties
+        }
+
+        @content = mash.content
+      end
+    end
   end
 end
 
