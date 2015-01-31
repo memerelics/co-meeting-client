@@ -21,6 +21,7 @@ GEM
       method_source (~> 0.8.1)
       slop (~> 3.4)
     rack (1.6.0)
+    rinku (1.7.3)
     slop (3.6.0)
 
 PLATFORMS
@@ -30,3 +31,4 @@ DEPENDENCIES
   hashie
   oauth2
   pry
+  rinku
