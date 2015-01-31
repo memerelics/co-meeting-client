@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        body {
+            color: #555459;
+        }
+        .wrap {
+            width: 600px; // 100%
+        }
+        .meta {
+            border-radius: 6px;
+            background: rgba(68, 222, 67, 0.64);
+            padding: 10px;
+            color: #fbfbfb;
+            margin: 5px 0 5px 0;
+        }
+        .note {
+            padding: 10px;
+            border-radius: 6px;
+            background: #e8e8e8;
+            margin: 5px 0 5px 0;
+        }
+        .box {
+            border-radius: 6px;
+            border: thin solid rgba(144, 222, 142, 0.64);
+            padding: 5px;
+        }
+        .box .message {
+            line-height: 1.5rem;
+            -ms-word-wrap: break-word;
+            word-wrap: break-word;
+        }
+        .box .message img.attachment {
+            max-width: 100%;
+        }
+        .box .res {
+            border-top: 1px solid #efefef;
+            padding: 2px 5px;
+            border-left: 3px solid #e8e8e8;
+        }
+        .box .lv1 { margin-left: 10px; }
+        .box .lv2 { margin-left: 20px; }
+        .box .lv3 { margin-left: 30px; }
+        .box .lv4 { margin-left: 40px; }
+        .box .lv5 { margin-left: 50px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+  <%= html %>
+</div>
+</body>
+</html>

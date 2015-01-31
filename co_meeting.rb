@@ -1,5 +1,8 @@
 require 'bundler/setup'
 Bundler.require
+require 'erb'
+require 'open-uri'
+require 'base64'
 
 class CoMeeting
   include Hashie
@@ -33,7 +36,7 @@ class CoMeeting
   end
 
   def attachment(attachment_id)
-    get("/attachments/show?attachment_id=#{attachment_id}")
+    Attachment.new(get("/attachments/show?attachment_id=#{attachment_id}"))
   end
 
   private
@@ -83,8 +86,6 @@ class CoMeeting
 
         @content = data.content
 
-        # TODO: APIでattachment取得
-        # http://co-meeting.github.io/api/attachments/show.html
         @attachments = data.elements.select{|id, val|
           val.type == 'ATTACHMENT'
         }.map{|id, val|
@@ -113,6 +114,34 @@ class CoMeeting
         end
       end
 
+      def to_html(lv: 0)
+        lv = 5 if lv > 5
+
+        output = "<div class='message #{lv.zero? ? '' : 'res'} lv#{lv}'>
+        [#{@creator}] #{filter(@content)}
+        #{attachment_tags(@attachments)}
+        <br />
+        </div>"
+
+        unless @children.count.zero?
+          output << @children.map{|c| c.to_html(lv: lv + 1) }.join
+        end
+
+        output
+      end
+
+      def filter(content)
+        out = content
+        out = out.gsub(/^\n/, '')
+        out = out.gsub(/\n/, '<br />')
+        out = Rinku.auto_link(out, :urls, 'target="_blank"')
+        out
+      end
+
+      def attachment_tags(attachments)
+        attachments.map {|a| "<attachment id='#{a.attachmentId}' />" }.join
+      end
+
       def all_attachments
         if @children.count.zero?
           @attachments
@@ -132,35 +161,48 @@ class CoMeeting
           val.properties
         }
 
-        @content = mash.content
+        @content = Rinku.auto_link(mash.content, :urls, 'target="_blank"')
       end
+    end
+  end
+
+  class Attachment
+
+    def initialize(data)
+      @file_name     = data.file_name
+      @url           = data.url
+      @thumbnail_url = data.thumbnail_url
+      @content_type  = data.content_type
+    end
+
+    def to_tag
+      return "<a class='attachment' href='#{url}'>#{@file_name}</a>" unless @content_type.include?('image')
+      base64 = Base64.encode64(open(@url).read) rescue nil
+      return "<p>no image</p>" unless base64
+      "<img class='attachment' src='data:#{@content_type};base64,#{base64}' />"
     end
   end
 end
 
 cmtg = CoMeeting.new
-puts cmtg.bioit_group.meetings.map{|m| m.title }
+# puts cmtg.bioit_group.meetings.map{|m| m.title }
 
-meeting = cmtg.meeting(cmtg.bioit_group.meetings.first.id)
+meeting = cmtg.meeting(cmtg.bioit_group.meetings[2].id)
 
-messages = meeting.discussion.blips.values
-messages.sample(5).each do |v|
-  puts "#{v.creator}: #{v.content}"
+html = ''
+html << "<div class='meta'>
+        #{meeting.title} <br />
+        #{meeting.updated_at.strftime('%Y-%m-%d')}
+        </div>"
+html << "<div class='note'>#{meeting.note.content}</div>" if meeting.note.content.length > 1
+html << meeting.discussion.map {|root| "<div class='box'>#{root.to_html}</div>" }.join
+
+meeting.all_attachments.each do |a|
+  attachment = cmtg.attachment(a.attachmentId)
+  html = html.gsub(/<attachment.*?#{a.attachmentId}.*?\/>/, attachment.to_tag)
 end
 
-# http://co-meeting.github.io/api/meetings/show.html#section-3
-# meetings.first.keys
-#  => ["annotations",
-#      "properties",
-#      "elements",
-#      "blipId",
-#      "childBlipIds",
-#      "contributors",
-#      "creator",
-#      "content",
-#      "lastModifiedTime",
-#      "parentBlipId",
-#      "version",
-#      "replyThreadIds",
-#      "threadId"]
-
+erb = ERB.new(open('./template.html.erb').read)
+open("#{ENV['HOME']}/Desktop/fa.html", "w+") do |f|
+  f.write(erb.result(binding))
+end
