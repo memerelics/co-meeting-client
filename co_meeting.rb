@@ -43,14 +43,14 @@ class CoMeeting
 
   class Meeting
     attr_reader :mash # debug usage
-    attr_reader :title, :creator, :note, :discussion
+    attr_reader :title, :updated_at, :creator, :note, :discussion
 
     def initialize(mash)
       @mash = mash
 
       @title = mash.title
+      @updated_at = Time.parse(mash.updated_at)
       @creator = mash.creator
-
       @note = Note.new(mash.note)
 
       # parse discussion blips into multi-rooted tree structure
@@ -68,7 +68,7 @@ class CoMeeting
     end
 
     class Blip
-      attr_reader :creator, :updated, :content, :children
+      attr_reader :creator, :updated_at, :content, :children
       attr_accessor :attachments
 
       def self.expand(blipid, discussion)
@@ -79,7 +79,7 @@ class CoMeeting
 
       def initialize(data, discussion)
         @creator = data.creator
-        @updated = data.lastModifiedTime
+        @updated_at = Time.parse(data.lastModifiedTime)
 
         @content = data.content
 
@@ -101,7 +101,7 @@ class CoMeeting
       end
 
       def to_s(time: false)
-        suffix = time ? "\n(#{@updated})" : nil
+        suffix = time ? "\n(#{@updated_at})" : nil
         "[#{@creator}]#{@content}#{suffix}"
       end
 
